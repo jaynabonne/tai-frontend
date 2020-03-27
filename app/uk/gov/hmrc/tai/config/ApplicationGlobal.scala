@@ -42,19 +42,6 @@ class TaiErrorHandler @Inject()(
   implicit val templateRenderer = localTemplateRenderer
   implicit val partialRetriever = taiHtmlPartialRetriever
 
-  private implicit def rhToRequest(rh: RequestHeader): Request[_] = Request(rh, "")
-
-  override def onClientError(request: RequestHeader, statusCode: Int, message: String): Future[Result] =
-    statusCode match {
-      case play.mvc.Http.Status.BAD_REQUEST  => Future.successful(BadRequest(badRequestTemplate(request)))
-      case play.mvc.Http.Status.NOT_FOUND    => Future.successful(NotFound(notFoundTemplate(request)))
-      case play.mvc.Http.Status.UNAUTHORIZED => throw new RuntimeException("*******************************")
-      case _                                 =>
-        // This is copied from GlobalSettingsHttpErrorHandler for backward compatibility
-        Future.successful(
-          Results.Status(statusCode)(views.html.defaultpages.badRequest(request.method, request.uri, message)))
-    }
-
   override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(
     implicit request: Request[_]) =
     views.html.error_template_noauth(pageTitle, heading, message, List.empty)
