@@ -20,7 +20,7 @@ import javax.inject.Inject
 import play.api.Logger
 import play.api.mvc.Results
 import uk.gov.hmrc.domain.Nino
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, UnauthorizedException}
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import uk.gov.hmrc.tai.config.DefaultServicesConfig
 import uk.gov.hmrc.tai.connectors.responses._
@@ -35,12 +35,8 @@ class PersonConnector @Inject()(httpHandler: HttpHandler) extends DefaultService
   def personUrl(nino: String): String = s"$serviceUrl/tai/$nino/person"
 
   def person(nino: Nino)(implicit hc: HeaderCarrier): Future[TaiResponse] =
-    httpHandler.getFromApiv2(personUrl(nino.nino)) map {
-      case Right(js)                 => TaiSuccessResponseWithPayload((js \ "data").as[Person])
-      case Left(code) if code == 401 => TaiUnauthorisedResponse("Connector returned 401")
-    } recover {
-      case e: Exception =>
-        Logger.warn(s"Couldn't retrieve person details for $nino with exception:${e.getMessage}", e)
-        TaiNotFoundResponse(e.getMessage)
+    httpHandler.getFromApi(personUrl(nino.nino)) map {
+      case js => TaiSuccessResponseWithPayload((js \ "data").as[Person])
+      case _  => TaiNotFoundResponse("Couldn't retrieve person details")
     }
 }

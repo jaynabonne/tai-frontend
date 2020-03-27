@@ -66,7 +66,7 @@ class HttpHandler @Inject()(val http: DefaultHttpClient) extends HttpErrorFuncti
 
         case UNAUTHORIZED =>
           Logger.warn(s"HttpHandler - Unauthorized received")
-          Future.successful(Left(httpResponse.status))
+          Future.failed(new UnauthorizedException(httpResponse.body))
 
         case _ =>
           Logger.warn(s"HttpHandler - Server error received")
@@ -107,7 +107,7 @@ class HttpHandler @Inject()(val http: DefaultHttpClient) extends HttpErrorFuncti
 
         case UNAUTHORIZED =>
           Logger.warn(s"HttpHandler - Unauthorized received")
-          Future.successful(httpResponse.json)
+          Future.failed(new UnauthorizedException(httpResponse.body))
 
         case _ =>
           Logger.warn(s"HttpHandler - Server error received")

@@ -21,13 +21,16 @@ import controllers.routes
 import javax.inject.Inject
 import net.ceedubs.ficus.Ficus._
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.mvc.Request
+import play.api.mvc.{Request, RequestHeader, Result, Results}
 import play.api.{Configuration, Play}
 import play.twirl.api.Html
 import uk.gov.hmrc.play.bootstrap.http.FrontendErrorHandler
 import uk.gov.hmrc.play.config.ControllerConfig
 import uk.gov.hmrc.tai.connectors.LocalTemplateRenderer
 import uk.gov.hmrc.urls.Link
+import play.api.mvc.Results.{BadRequest, InternalServerError, NotFound}
+
+import scala.concurrent.Future
 
 class TaiErrorHandler @Inject()(
   localTemplateRenderer: LocalTemplateRenderer,
@@ -38,6 +41,19 @@ class TaiErrorHandler @Inject()(
 
   implicit val templateRenderer = localTemplateRenderer
   implicit val partialRetriever = taiHtmlPartialRetriever
+
+  private implicit def rhToRequest(rh: RequestHeader): Request[_] = Request(rh, "")
+
+  override def onClientError(request: RequestHeader, statusCode: Int, message: String): Future[Result] =
+    statusCode match {
+      case play.mvc.Http.Status.BAD_REQUEST  => Future.successful(BadRequest(badRequestTemplate(request)))
+      case play.mvc.Http.Status.NOT_FOUND    => Future.successful(NotFound(notFoundTemplate(request)))
+      case play.mvc.Http.Status.UNAUTHORIZED => throw new RuntimeException("*******************************")
+      case _                                 =>
+        // This is copied from GlobalSettingsHttpErrorHandler for backward compatibility
+        Future.successful(
+          Results.Status(statusCode)(views.html.defaultpages.badRequest(request.method, request.uri, message)))
+    }
 
   override def standardErrorTemplate(pageTitle: String, heading: String, message: String)(
     implicit request: Request[_]) =
